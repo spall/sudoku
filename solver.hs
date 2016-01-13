@@ -93,7 +93,7 @@ isZeroed sq = let c_len = length (constraints sq) in
 hasFailed :: SudokuBoard -> Bool
 hasFailed board = foldl (\prev sq -> prev || (isZeroed sq)) False board
 
--- compares 2 squares constraint list lengths. returning the one with fewer constrains
+-- compares 2 squares constraint list lengths. returning the one with fewer constraints
 sqCompare :: Square -> Square -> Square
 sqCompare sq1 sq2 = let len = length (constraints sq1)
                         len2 = length (constraints sq2) in
@@ -117,16 +117,18 @@ remove i (f:r) = if f == i
                  then r
                  else f:(remove i r)
 
+updateConstraints :: SudokuBoard -> [Int] -> Int -> SudokuBoard
+updateConstraints board list val = foldl (\b index -> let square = b ! index
+                                                          new_c = remove val (constraints square)
+                                                          new_sq2 = square { constraints = new_c } in
+                                                      b//[(index, new_sq2)]) board list
+
 -- update squares value and constraints of its peers
 updateBoard :: SudokuBoard -> Int -> Int -> SudokuBoard
 updateBoard board i val = let sq = board ! i
                               new_sq = sq { value = val, constraints = [] }
                               new_board = board//[(i, new_sq)] in
-                          foldl (\board index -> let square = board ! index
-                                                     new_c = remove val (constraints square)
-                                                     new_sq2 = square { constraints = new_c } in
-                                                  board//[(index, new_sq2)]) board (peers sq)
-
+                          updateConstraints new_board (peers sq) val
 
                           {-
                           amap (\square -> if isPeer square new_sq
@@ -138,8 +140,6 @@ updateBoard board i val = let sq = board ! i
 ormap :: (Foldable a) => (t -> Bool) -> a t -> Bool
 ormap func list = foldl (\prev val -> prev || (func val)) False list
 
-
-
 search :: SudokuBoard -> Bool
 search board = if hasFailed board
                then False
@@ -147,6 +147,14 @@ search board = if hasFailed board
                     then True
                else let lsq = leastChoicesSquare board in
                     ormap (\val -> (search (updateBoard board (pos lsq) val))) (constraints lsq)
+
+
+-- for each square in board, if its value is non-zero, do constraint propogation to peers
+initConstraints :: SudokuBoard -> SudokuBoard
+initConstraints board = foldl (\b sq -> if squareSolved sq
+                                        then let val = value sq in
+                                             updateConstraints b (peers sq) val
+                                        else b) board board
 
 {-                    
 init :: SudokuBoard -> SudokuBoard -- do initial constraint propogation
