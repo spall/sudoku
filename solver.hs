@@ -43,10 +43,6 @@ mkSquare m n i v= let c = if v == 0 then [] else [1..m*n]
 squareSolved :: Square -> Bool
 squareSolved sq = (value sq) /= 0
 
--- is sq1 a peer of sq2?
-isPeer :: Square -> Square -> Bool
-isPeer sq1 sq2 = True
-
 -- returns as a list, the peers of this index
 mkPeers :: Int -> Int -> Int -> [Int]
 mkPeers m n i = let c = column m n i
