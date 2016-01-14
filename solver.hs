@@ -1,4 +1,4 @@
-module Main where
+module Solver where
 
 import Data.Array.IArray
 
@@ -46,8 +46,8 @@ data Square = Square { constraints :: [Int]   -- possible values
 -- square constructor
           --  m -> n   -> index->val -> square
 mkSquare :: Int -> Int -> Int -> Int -> Square
-mkSquare m n i v= let c = if v == 0 then [] else [1..m*n]
-                      p = mkPeers i m n in
+mkSquare m n i v= let c = if v == 0 then [1..m*n] else []
+                      p = mkPeers m n i in
                    Square c p v i
 
 squareSolved :: Square -> Bool
@@ -62,21 +62,22 @@ mkPeers m n i = let c = column m n i
 --given an index in a sudoku board of size m x n
 -- gives row number that index belongs to.
 row :: Int -> Int -> Int -> Int
-row m n i = quot i (m*n) -- division
+row m n i = quot i (m*n) -- division,  row can be 0
 
 -- given an index in a sudoku board of size m x n
 -- gives column number that index belongs to.
 column :: Int -> Int -> Int -> Int
-column m n i = i - (quot i (m*n))*m*n
+column m n i = i - (quot i (m*n))*m*n -- column can be 0
 
 -- given a row number, returns as a list, the indices of that row
 rowPeers :: Int -> Int -> Int -> [Int]
-rowPeers m n r = [r*m*n..(r+1)*m*n-1]
+rowPeers m n r = [r*m*n..(r+1)*m*n-1] -- looks like it works
 
--- given a column number, returns as a lsit, the indices of that column
+-- given a column number, returns as a list, the indices of that column
 colPeers :: Int -> Int -> Int -> [Int]
-colPeers m n c = [c*i | i <- [0..m*n] ] -- map (* c) [0..m*n]
+colPeers m n c = [c+ n*m*i | i <- [0..m*n-1]] -- map (* c) [0..m*n] // does not work if c is 0.
 
+-- should test this function....
 -- grid is n x m.
 -- given a grid number, returns as a list, the indices of that grid
 gridPeers :: Int -> Int -> Int -> Int -> [Int]
@@ -165,6 +166,3 @@ printSudokuBoard board m n = foldl (\str i -> let is = rowPeers m n i
                                               if i /= 0 && mod (i+1) n == 0
                                               then rs++"\n\n"
                                               else rs++"\n") "" [0..(m*n-1)]
-
-main = return ()-- let b = listArray (0,35) [2..37] in
-       -- putStrLn (printSudokuBoard b 2 3)
