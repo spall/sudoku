@@ -81,7 +81,7 @@ colPeers m n c = [c*i | i <- [0..m*n] ] -- map (* c) [0..m*n]
 -- given a grid number, returns as a list, the indices of that grid
 gridPeers :: Int -> Int -> Int -> Int -> [Int]
 gridPeers m n r c = let gc = quot c m
-                      gr = n * (quot r n) in
+                        gr = n * (quot r n) in
                   foldl (\prev i -> prev ++ [i*m*n+gc*m..(i*m*n+gc*m)+m-1]) [] [gr..gr+n-1]
 
 type SudokuBoard = Array Int Square
@@ -130,9 +130,6 @@ updateBoard board i val = let sq = board ! i
                                                 square { constraints = new_c }
                                            else square) new_board -}
 
-
-
-
 search :: SudokuBoard -> Bool
 search board = if hasFailed board
                then False
@@ -155,9 +152,19 @@ init board = []
 -}
 
 -- TODO
--- 1. finish grid functions.  Or come up with new way to represent sudoku board in array
 -- 2. parse string boards into SudokuBoard data structure.
 -- 3. Be able to print out solution sudoku board
 -- 4. Test cases
 
-main = return ()
+printSudokuBoard :: SudokuBoard -> Int -> Int -> String
+printSudokuBoard board m n = foldl (\str i -> let is = rowPeers m n i
+                                                  rs = (foldl (\prev j -> let s = prev++(show (value (board ! j))) in
+                                                                          if j /= 0 && mod (j+1) m == 0
+                                                                          then s++"  "
+                                                                          else s++ " ") str is) in
+                                              if i /= 0 && mod (i+1) n == 0
+                                              then rs++"\n\n"
+                                              else rs++"\n") "" [0..(m*n-1)]
+
+main = return ()-- let b = listArray (0,35) [2..37] in
+       -- putStrLn (printSudokuBoard b 2 3)
