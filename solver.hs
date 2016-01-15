@@ -2,10 +2,6 @@ module Solver where
 
 import Data.Array.IArray
 
-{-
-class Solved t where
-  solved :: t -> Bool
--}
 data Square = Unsolved { constraints :: [Int]   -- possible values
                        , peers :: [Int]       -- squares that constrain this square and vice-versa
                        , pos :: Int
@@ -17,38 +13,9 @@ data Square = Unsolved { constraints :: [Int]   -- possible values
 
 type SudokuBoard = Array Int Square
 
-{-
-instance Solved Bool where
-  solved f = False
-
-instance Solved (Array i e) where
-  solved board = True
--}
-
-
-{-
-class Nullable t where
-  isNull :: t -> Bool
-
-instance Nullable Int where
-  isNull i = i == 0
-
-instance Nullable Char where
-  isNull c = c == '\0'
--}
 
 -- A sudoku grid (small square) has a list of contraints (numbers it could be)
 -- and a list of "peers" squares that cannot have the same number.
-
--- Need a search function
-
--- Need a function to update constraints
-
--- Need a sudoku board representation
--- Use an Array. Where index using Integer, and then have a data time in the array.
--- data type can store the constraints and to save doing math could store index of peers
-
---type IntSquare = Square Int
 
 ormap :: (Foldable a) => (t -> Bool) -> a t -> Bool
 ormap func list = foldl (\prev val -> prev || (func val)) False list
@@ -151,13 +118,24 @@ updateBoard board i val = let sq = board ! i
                                                 square { constraints = new_c }
                                            else square) new_board -}
 
-search :: SudokuBoard -> Bool
+toBool :: Maybe SudokuBoard -> Bool
+toBool Nothing = False
+toBool (Just board) = True
+
+maybeOr :: Maybe b -> Maybe b-> Maybe b
+maybeOr b1@Nothing b2 = b2
+maybeOr b1@(Just thing) b2 = b1
+
+maybeOrMap :: (Foldable a) => (t -> (Maybe b)) -> a t -> Maybe b
+maybeOrMap func list = foldl (\prev val -> maybeOr prev (func val)) Nothing list
+
+search :: SudokuBoard -> Maybe SudokuBoard
 search board = if hasFailed board
-               then False
+               then Nothing
                else if solved board -- print board
-                    then True
+                    then Just board
                else let lsq = leastChoicesSquare board in
-                    ormap (\val -> (search (updateBoard board (pos lsq) val))) (constraints lsq)
+                    maybeOrMap (\val -> (search (updateBoard board (pos lsq) val))) (constraints lsq)
 
 
 -- for each square in board, if its value is non-zero, do constraint propogation to peers
