@@ -3,6 +3,30 @@ module Solver where
 import Data.Array.IArray
 
 {-
+class Solved t where
+  solved :: t -> Bool
+-}
+data Square = Unsolved { constraints :: [Int]   -- possible values
+                       , peers :: [Int]       -- squares that constrain this square and vice-versa
+                       , pos :: Int
+                       }
+            | Solved {peers :: [Int]
+                     , value :: Int
+                     , pos :: Int
+                     } deriving (Show)
+
+type SudokuBoard = Array Int Square
+
+{-
+instance Solved Bool where
+  solved f = False
+
+instance Solved (Array i e) where
+  solved board = True
+-}
+
+
+{-
 class Nullable t where
   isNull :: t -> Bool
 
@@ -36,22 +60,13 @@ remove i (f:r) = if f == i
                  then r
                  else f:(remove i r)
 
-data Square = Square { constraints :: [Int]   -- possible values
-                       , peers :: [Int]       -- squares that constrain this square and vice-versa
-                       , value :: Int         -- value of this square. 0 if undecided.
-                       , pos :: Int
-                       } deriving (Show)
-
-
 -- square constructor
           --  m -> n   -> index->val -> square
 mkSquare :: Int -> Int -> Int -> Int -> Square
-mkSquare m n i v= let c = if v == 0 then [1..m*n] else []
-                      p = mkPeers m n i in
-                   Square c p v i
-
-squareSolved :: Square -> Bool
-squareSolved sq = (value sq) /= 0
+mkSquare m n i v = let peers = mkPeers m n i in
+                   if v == 0
+                   then Unsolved [1..m*n] peers i
+                   else Solved peers v i
 
 -- returns as a list, the peers of this index
 mkPeers :: Int -> Int -> Int -> [Int]
@@ -85,43 +100,48 @@ gridPeers m n r c = let gc = quot c m
                         gr = n * (quot r n) in
                   foldl (\prev i -> prev ++ [i*m*n+gc*m..(i*m*n+gc*m)+m-1]) [] [gr..gr+n-1]
 
-type SudokuBoard = Array Int Square
 
--- returns false if square can still be assigned a value, true otherwise
-isZeroed :: Square -> Bool
-isZeroed sq = null (constraints sq) && (not (squareSolved sq))
+
+-- returns returns true if constraint list is empty and is unsolved
+sqFailed :: Square -> Bool
+sqFailed Solved{} = False
+sqFailed Unsolved {constraints = c } = null c
 
 -- returns true if this is not a solution 
 hasFailed :: SudokuBoard -> Bool
-hasFailed board = ormap isZeroed board
+hasFailed board = ormap sqFailed board
 
 -- compares 2 squares constraint list lengths. returning the one with fewer constraints
 sqCompare :: Square -> Square -> Square
-sqCompare sq1 sq2 = if null (constraints sq1)
-                    then sq2
-                    else let len = length (constraints sq1)
-                             len2 = length (constraints sq2) in
-                         if (len2 > 0) && len2 < len
-                         then sq2
-                         else sq1
+sqCompare sq1@Solved{} sq2 = sq2
+sqCompare sq1@Unsolved{} sq2@Solved{} = sq1
+sqCompare sq1@Unsolved{constraints = c} sq2@Unsolved{constraints = c2} = let len = length c
+                                                                             len2 = length c2 in
+                                                                         if len2 < len
+                                                                         then sq2
+                                                                         else sq1
 
 -- returns index of square with fewest constraints
 leastChoicesSquare :: SudokuBoard -> Square
 leastChoicesSquare board = foldl sqCompare (board ! 0) board
 
+
 solved :: SudokuBoard -> Bool
-solved board = foldl (\prev sq -> prev && ((value sq) /= 0)) True board
+solved board = foldl (\prev sq -> prev && case sq of
+                                          Solved{} -> True
+                                          Unsolved{} -> False) True board
 
 updateConstraints :: SudokuBoard -> [Int] -> Int -> SudokuBoard
-updateConstraints board list val = foldl (\b index -> let square = b ! index
-                                                          new_c = remove val (constraints square)
-                                                          new_sq2 = square { constraints = new_c } in
-                                                      b//[(index, new_sq2)]) board list
+updateConstraints board list val = foldl (\b index -> let square = b ! index in
+                                                      case square of
+                                                      Solved{} -> b
+                                                      Unsolved{constraints=c} -> b//[(index, square {constraints = (remove val c)})]) board list
+
 
 -- update squares value and constraints of its peers
 updateBoard :: SudokuBoard -> Int -> Int -> SudokuBoard
 updateBoard board i val = let sq = board ! i
-                              new_sq = sq { value = val, constraints = [] }
+                              new_sq =  Solved (peers sq) val i
                               new_board = board//[(i, new_sq)] in
                           updateConstraints new_board (peers sq) val
 
@@ -142,10 +162,9 @@ search board = if hasFailed board
 
 -- for each square in board, if its value is non-zero, do constraint propogation to peers
 initConstraints :: SudokuBoard -> SudokuBoard
-initConstraints board = foldl (\b sq -> if squareSolved sq
-                                        then let val = value sq in
-                                             updateConstraints b (peers sq) val
-                                        else b) board board
+initConstraints board = foldl (\b sq -> case sq of
+                                        Solved{value=v, peers=p} -> updateConstraints b p v
+                                        Unsolved{} -> b) board board
 
 {-                    
 init :: SudokuBoard -> SudokuBoard -- do initial constraint propogation
