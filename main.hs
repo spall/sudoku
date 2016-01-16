@@ -1,6 +1,7 @@
 module Main where
 
 import System.IO
+import System.IO.Error
 import Solver
 import Data.Array.IArray
 import Data.Char
@@ -8,11 +9,12 @@ import GHC.IO.Handle
 import GHC.IO.Handle.FD
 import Control.Monad
 
+
 eatSpace :: Handle -> IO ()
 eatSpace h = liftM2 (||) (hIsEOF h)
-                         (liftM (not . isSpace) (hLookAhead h)) >>= (\b -> if b
-                                                                           then return ()
-                                                                           else eatSpace h)
+                         (liftM not (liftM isSpace (hLookAhead h))) >>= (\b -> if b
+                                                                               then return ()
+                                                                               else (hGetChar h) >> (eatSpace h))
 
 -- liftM2 :: (a1 -> a2 -> r) -> m a1 -> m a2 -> m r
 getWord :: Handle -> IO String
@@ -39,12 +41,12 @@ parseBoardSize handle = let m = nextToken handle -- IO string
                         liftM2 parse2Num m n
 
 createBoard :: (Int,Int) -> [String] -> SudokuBoard
-createBoard (m,n) str = Board m n (listArray (0,(m*n)^2-1) (map (\(s,i) -> let v = if all isDigit s
+createBoard (m,n) str = listArray (0,(m*n)^2-1) (map (\(s,i) -> let v = if all isDigit s
                                                                                          then read s::Int
                                                                                          else if (length s) == 1 &&  (head s) == '_'
                                                                                               then 0
                                                                                               else error "Invalid board format" in
-                                                                                 mkSquare m n i v) (zip str [0..(m*n)^2-1])))
+                                                                                 mkSquare m n i v) (zip str [0..(m*n)^2-1]))
 
 parseBoard :: Handle -> IO [String]
 parseBoard h = let token = (nextToken h) in -- token is IO string
@@ -66,11 +68,16 @@ parseFile file = let handle = openFile file ReadMode -- handle is an IO handle
 
 printSolution :: Maybe SudokuBoard -> IO ()
 printSolution Nothing = putStrLn (show "No solution")
-printSolution (Just board) = putStrLn (printSudokuBoard board)
+printSolution (Just board) = putStrLn (printSudokuBoard board 3 3)
 
-main = let board = parseFile "test.txt" in-- IO Maybe SudokuBoard
-     --  (liftM solve board) >> return ()
-       (liftM solve board) >>= printSolution
+printBoard :: SudokuBoard -> IO ()
+printBoard board = putStrLn (show board)
+
+main = (openFile "test.txt" ReadMode) >>=
+    --   putStrLn (handle >>= hIsClosed >>= show)
+      -- handle >>= nextToken >>= putStrLn
+  --  (liftM solve board) >> return ()
+      -- board >>= printBoard
        
            
   {-let test1 = "3 3 "++
