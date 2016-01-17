@@ -9,20 +9,26 @@ import GHC.IO.Handle
 import GHC.IO.Handle.FD
 import Control.Monad
 
-
 eatSpace :: Handle -> IO ()
 eatSpace h = liftM2 (||) (hIsEOF h)
-                         (liftM not (liftM isSpace (hLookAhead h))) >>= (\b -> if b
-                                                                               then return ()
-                                                                               else (hGetChar h) >> (eatSpace h))
+                         (liftM (not.isSpace)
+                          (catchIOError (hLookAhead h)
+                           (\e -> if isEOFError e
+                                  then return 'c'
+                                  else (hLookAhead h)))) >>= (\b -> if b
+                                                                    then return ()
+                                                                    else (hGetChar h) >> (eatSpace h))
 
--- liftM2 :: (a1 -> a2 -> r) -> m a1 -> m a2 -> m r
 getWord :: Handle -> IO String
 getWord h = liftM2 (||) (hIsEOF h)
-                        (liftM isSpace (hLookAhead h)) >>= (\b -> if b
-                                                                  then return ""
-                                                                  else liftM2 (:) (hGetChar h)
-                                                                               (getWord h))
+                        (liftM isSpace
+                         (catchIOError (hLookAhead h)
+                          (\e -> if isEOFError e
+                                 then return ' '
+                                 else (hLookAhead h)))) >>= (\b -> if b
+                                                                   then return ""
+                                                                   else liftM2 (:) (hGetChar h) (getWord h))
+            
             
 -- (>>=) ::  m a -> (a -> m b) -> m b 
                   
@@ -30,54 +36,52 @@ getWord h = liftM2 (||) (hIsEOF h)
 nextToken :: Handle -> IO String
 nextToken handle = (eatSpace handle) >> (getWord handle)
 
+getAllTokens :: Handle -> IO [String]
+getAllTokens handle = (hIsEOF handle) >>= (\b -> if b 
+                                                 then return []
+                                                 else liftM2 (:) (nextToken handle)
+                                                                 (getAllTokens handle))
+
 parse2Num :: String -> String -> (Int,Int)
 parse2Num n1 n2 = if (not (all isDigit n1)) || (not (all isDigit n2))
                   then error "Both strings are not integers"
                   else (read n1::Int, read n2::Int)
- 
-parseBoardSize :: Handle -> IO (Int, Int)
-parseBoardSize handle = let m = nextToken handle -- IO string
-                            n = nextToken handle in
-                        liftM2 parse2Num m n
+
+parseBoardSize :: [String] -> (Int,Int)
+parseBoardSize strs = parse2Num (head strs) (head (tail strs))
+
+parseBoard  :: [String] -> [String]
+parseBoard board = init (tail (tail board))
 
 createBoard :: (Int,Int) -> [String] -> SudokuBoard
-createBoard (m,n) str = listArray (0,(m*n)^2-1) (map (\(s,i) -> let v = if all isDigit s
-                                                                                         then read s::Int
-                                                                                         else if (length s) == 1 &&  (head s) == '_'
-                                                                                              then 0
-                                                                                              else error "Invalid board format" in
-                                                                                 mkSquare m n i v) (zip str [0..(m*n)^2-1]))
-
-parseBoard :: Handle -> IO [String]
-parseBoard h = let token = (nextToken h) in -- token is IO string
-               liftM2 (:) token ((liftM null token) >>= (\b  -> if b
-                                                                then return [""]
-                                                                else parseBoard h))
+createBoard (m,n) str = if not (checkBoard (m,n) str)
+                        then error "Error: board is of wrong size according to m and n"
+                        else listArray (0,(m*n)^2-1)
+                                       (map (\(s,i) -> let v = if all isDigit s
+                                                               then read s::Int
+                                                               else if (length s) == 1 &&  (head s) == '_'
+                                                                    then 0
+                                                                    else error "Invalid board format" in
+                                                       mkSquare m n i v) (zip str [0..(m*n)^2-1]))
 
 -- check if list length is correct
 checkBoard :: (Int,Int) -> [String] -> Bool
-checkBoard (m,n) strs = (length strs) == m*n
+checkBoard (m,n) strs = (length strs) == (m*n)^2
 
 parseFile :: FilePath -> IO SudokuBoard
 parseFile file = let handle = openFile file ReadMode -- handle is an IO handle
-                     iomn = handle >>= parseBoardSize -- IO(int,int)
-                     list_str = handle >>= parseBoard in
-                 (liftM2 checkBoard iomn list_str) >>= (\b -> if not b
-                                                              then error "Error: board is of wrong size according to m and n."
-                                                              else liftM2 createBoard iomn list_str)
+                     tokens = handle >>= getAllTokens in
+                 liftM2 createBoard (liftM parseBoardSize tokens)
+                                    (liftM parseBoard tokens)
 
 printSolution :: Maybe SudokuBoard -> IO ()
 printSolution Nothing = putStrLn (show "No solution")
 printSolution (Just board) = putStrLn (printSudokuBoard board 3 3)
 
-printBoard :: SudokuBoard -> IO ()
-printBoard board = putStrLn (show board)
+main = (liftM solve (parseFile "test.txt")) >>= printSolution
 
-main = (openFile "test.txt" ReadMode) >>=
-    --   putStrLn (handle >>= hIsClosed >>= show)
-      -- handle >>= nextToken >>= putStrLn
-  --  (liftM solve board) >> return ()
-      -- board >>= printBoard
+ -- problem is that iomn is not being evaluated so list_str has the board size
+  -- (liftM solve (parseFile "test.txt")) >>= printSolution
        
            
   {-let test1 = "3 3 "++
