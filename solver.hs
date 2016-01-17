@@ -19,8 +19,12 @@ mkSquare m n i v = let peers = mkPeers m n i in
                    then Unsolved [1..m*n] peers i
                    else Solved peers v i
 
-type SudokuBoard = Array Int Square
+data Board t = Board { m_size :: Int
+                     , n_size :: Int
+                     , squares :: Array Int t
+                     }
 
+type SudokuBoard = Board Square
 
 -- A sudoku grid (small square) has a list of contraints (numbers it could be)
 -- and a list of "peers" squares that cannot have the same number.
@@ -74,9 +78,9 @@ gridPeers m n r c = let gc = quot c m
 
 -- returns true if board cannot be solved.
 failed :: SudokuBoard -> Bool
-failed board = any (\sq -> case sq of
+failed Board{squares=sqs} = any (\sq -> case sq of
                            Solved{} -> False
-                           Unsolved{constraints=c} -> null c) board
+                           Unsolved{constraints=c} -> null c) sqs
 
 -- compares 2 squares constraint list lengths. returning the one with fewer constraints
 sqCompare :: Square -> Square -> Square
@@ -90,30 +94,26 @@ sqCompare sq1@Unsolved{constraints = c} sq2@Unsolved{constraints = c2} = let len
 
 -- returns square with fewest constraints
 leastChoicesSquare :: SudokuBoard -> Square
-leastChoicesSquare board = foldl sqCompare (board ! 0) board
+leastChoicesSquare Board{squares=sqs} = foldl sqCompare (sqs ! 0) sqs
 
 solved :: SudokuBoard -> Bool
-solved board = all (\sq -> case sq of
+solved Board{squares=sqs} = all (\sq -> case sq of
                            Solved{} -> True
-                           Unsolved{} -> False) board
+                           Unsolved{} -> False) sqs
 
 updateConstraints :: SudokuBoard -> [Int] -> Int -> SudokuBoard
-updateConstraints board list val = foldl (\b index -> let square = b ! index in
-                                                      case square of
-                                                      Solved{} -> b
-                                                      Unsolved{constraints=c} -> b//[(index, square {constraints = (remove val c)})]) board list
+updateConstraints board@Board{squares=sqs} list val = board{squares = (foldl (\b index -> let square = b ! index in
+                                                                                          case square of
+                                                                                          Solved{} -> b
+                                                                                          Unsolved{constraints=c} -> b//[(index, square {constraints = (remove val c)})]) sqs list)}
 
 
 -- update squares value and constraints of its peers
 updateBoard :: SudokuBoard -> Int -> Int -> SudokuBoard
-updateBoard board i val = let sq = board ! i
-                              new_sq =  Solved (peers sq) val i
-                              new_board = board//[(i, new_sq)] in
-                          updateConstraints new_board (peers sq) val
-
-toBool :: Maybe SudokuBoard -> Bool
-toBool Nothing = False
-toBool (Just board) = True
+updateBoard board@Board{squares=sqs} i val = let sq = sqs ! i
+                                                 new_sq =  Solved (peers sq) val i
+                                                 new_board = board{squares = sqs//[(i, new_sq)]} in
+                                             updateConstraints new_board (peers sq) val
 
 maybeOr :: Maybe b -> Maybe b-> Maybe b
 maybeOr b1@Nothing b2 = b2
@@ -134,27 +134,21 @@ search board = if failed board
 
 -- for each square in board, if its value is non-zero, do constraint propogation to peers
 initConstraints :: SudokuBoard -> SudokuBoard
-initConstraints board = foldl (\b sq -> case sq of
-                                        Solved{value=v, peers=p} -> updateConstraints b p v
-                                        Unsolved{} -> b) board board
+initConstraints board@Board{squares=sqs} = foldl (\b sq -> case sq of
+                                                           Solved{value=v, peers=p} -> updateConstraints b p v
+                                                           Unsolved{} -> b) board sqs
 
-{-                    
-init :: SudokuBoard -> SudokuBoard -- do initial constraint propogation
-init board = []
--}
-
--- TODO
--- 2. parse string boards into SudokuBoard data structure.
--- 3. Be able to print out solution sudoku board
--- 4. Test cases
+solve :: SudokuBoard -> Maybe SudokuBoard
+solve board = (search (initConstraints board))
 
 -- adapt this function to work with the new square constructors
-printSudokuBoard :: SudokuBoard -> Int -> Int -> String
-printSudokuBoard board m n = foldl (\str i -> let is = rowPeers m n i
-                                                  rs = (foldl (\prev j -> let s = prev++(show (value (board ! j))) in
-                                                                          if j /= 0 && mod (j+1) m == 0
-                                                                          then s++"  "
-                                                                          else s++ " ") str is) in
-                                              if i /= 0 && mod (i+1) n == 0
-                                              then rs++"\n\n"
-                                              else rs++"\n") "" [0..(m*n-1)]
+printSudokuBoard :: SudokuBoard -> String
+printSudokuBoard board@Board{m_size=m, n_size=n, squares=sqs} = foldl (\str i -> let is = rowPeers m n i
+                                                                                     rs = (foldl
+                                                                                           (\prev j -> let s = prev++(show (value (sqs ! j))) in
+                                                                                                       if j /= 0 && mod (j+1) m == 0
+                                                                                                       then s++"  "
+                                                                                                       else s++ " ") str is) in
+                                                                                 if i /= 0 && mod (i+1) n == 0
+                                                                                 then rs++"\n\n"
+                                                                                 else rs++"\n") "" [0..(m*n-1)]
