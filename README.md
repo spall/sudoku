@@ -1,5 +1,7 @@
 A sudoku solver and generator written in Haskell as a course project.
 
+sudoku generator requires haskell random package.
+
 Project requirements:
 
 Part 1. 
