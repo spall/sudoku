@@ -26,6 +26,16 @@ data Board t = Board { m_size :: Int
 
 type SudokuBoard = Board Square
 
+instance Eq Square where
+  (==) Unsolved{} Solved{} = False
+  (==) Solved{} Unsolved{} = False
+  (==) Unsolved{} Unsolved{} = True
+  (==) Solved{value=v1} Solved{value=v2} = v1 == v2
+
+instance (Eq t) => Eq (Board t) where
+  (==) Board{squares=sqs1} Board{squares=sqs2}= all (\(sq1,sq2) -> sq1 == sq2)
+                                                (zip (elems sqs1) (elems sqs2))
+
 -- A sudoku grid (small square) has a list of contraints (numbers it could be)
 -- and a list of "peers" squares that cannot have the same number.
 
