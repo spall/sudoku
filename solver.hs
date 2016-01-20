@@ -155,7 +155,9 @@ solve board = (search (initConstraints board))
 printSudokuBoard :: SudokuBoard -> String
 printSudokuBoard board@Board{m_size=m, n_size=n, squares=sqs} = foldl (\str i -> let is = rowPeers m n i
                                                                                      rs = (foldl
-                                                                                           (\prev j -> let s = prev++(show (value (sqs ! j))) in
+                                                                                           (\prev j -> let s = case sqs ! j of
+                                                                                                               Unsolved{} -> prev++"_"
+                                                                                                               Solved{value=v} -> prev++(show v) in
                                                                                                        if j /= 0 && mod (j+1) m == 0
                                                                                                        then s++"  "
                                                                                                        else s++ " ") str is) in
