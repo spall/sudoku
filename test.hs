@@ -103,7 +103,7 @@ parseTest test = let strs = words test
 
 printSolution :: Maybe SudokuBoard -> IO ()
 printSolution Nothing = putStrLn (show "No solution")
-printSolution (Just board) = putStrLn (printSudokuBoard board)
+printSolution (Just board) = putStrLn (show board)
  
 run_all_tests :: IO ()
 run_all_tests = run_test1 >> run_test2 >> run_test3 >> run_test4
