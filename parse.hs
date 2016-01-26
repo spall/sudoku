@@ -65,6 +65,14 @@ createBoard (m,n) str = if not (checkBoard (m,n) str)
 checkBoard :: (Int,Int) -> [String] -> Bool
 checkBoard (m,n) strs = (length strs) == (m*n)^2
 
+-- parse string to sudokuboard
+parseString :: String -> SudokuBoard
+parseString test = let strs = words test
+                       size = parseBoardSize strs
+                       board = tail (tail strs) in
+                   (createBoard size board)
+
+-- parse file to io sudokuboard
 parseFile :: FilePath -> IO SudokuBoard
 parseFile file = let handle = openFile file ReadMode -- handle is an IO handle
                      tokens = handle >>= getAllTokens in

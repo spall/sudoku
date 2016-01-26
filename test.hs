@@ -25,8 +25,8 @@ run_test1 = let test = " 3 3 "++         -- has a solution
                       "4 3 2  6 9 5  8 7 1  "++
                       "9 1 5  7 8 4  2 6 3 " in
             (putStrLn "\nTest 1: ") >> (putStrLn (boolToString (compareBoards
-                                                                (solve (parseTest test))
-                                                                (Just (parseTest sol)))))
+                                                                (solve (parseString test))
+                                                                (Just (parseString sol)))))
 
 run_test2 :: IO ()
 run_test2 = let test = " 4 3 "++                      -- has a solution
@@ -56,8 +56,8 @@ run_test2 = let test = " 4 3 "++                      -- has a solution
                       "11 4 1 9  10 12 8 6  2 3 7 5  "++
                       "12 5 7 10  2 9 11 3  8 4 1 6" in
             (putStrLn "\nTest 2: ") >> (putStrLn (boolToString (compareBoards
-                                                                (solve (parseTest test))
-                                                                (Just (parseTest sol)))))
+                                                                (solve (parseString test))
+                                                                (Just (parseString sol)))))
 
 run_test3 :: IO ()
 run_test3 = let test = "1 2 "++
@@ -67,8 +67,8 @@ run_test3 = let test = "1 2 "++
                       "1 2 "++
                       "2 1 " in
             (putStrLn "\nTest 3: ") >> (putStrLn (boolToString (compareBoards
-                                                                (solve (parseTest test))
-                                                                (Just (parseTest sol)))))
+                                                                (solve (parseString test))
+                                                                (Just (parseString sol)))))
 
 run_test4 :: IO ()
 run_test4 = let test = " 3 3 "++         -- has no solution
@@ -82,7 +82,7 @@ run_test4 = let test = " 3 3 "++         -- has no solution
                        "_ _ 2  _ 9 _  8 7 1 "++
                        "9 _ 5  _ _ _  2 6 _" in
             (putStrLn "\nTest 4: ") >> (putStrLn (boolToString (compareBoards
-                                                                (solve (parseTest test))
+                                                                (solve (parseString test))
                                                                 Nothing)))
 
 boolToString :: Bool -> String
@@ -94,12 +94,6 @@ compareBoards Nothing Nothing = True
 compareBoards (Just board1) (Just board2) = board1 == board2
 compareBoards Nothing (Just board2) = False
 compareBoards (Just board1) Nothing = False
-
-parseTest :: String -> SudokuBoard
-parseTest test = let strs = words test
-                     size = parseBoardSize strs
-                     board = tail (tail strs) in
-                 (createBoard size board)
 
 printSolution :: Maybe SudokuBoard -> IO ()
 printSolution Nothing = putStrLn (show "No solution")

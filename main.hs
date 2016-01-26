@@ -4,6 +4,7 @@ import System.IO
 import System.IO.Error
 import Solver
 import Parse
+import Client
 import Generator
 import Test (run_all_tests, printSolution)
 import Control.Monad
@@ -22,7 +23,9 @@ run Args{generate=Nothing, }
 -}
   
 -- end command line parsing -------
-main = (liftM solve (parseFile "test1.txt")) >>= printSolution
+main = (liftM solve (getPuzzle "file:///home/spall/Documents/classes/func_prog_studio/sudoku/test1.txt")) >>= printSolution
+
+  --(liftM solve (parseFile "test1.txt")) >>= printSolution
 
   --printSolution (liftM solve (parseFile "test1.txt"))
 
