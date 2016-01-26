@@ -1,34 +1,16 @@
 module Main where
 
-import System.IO
-import System.IO.Error
-import Solver
-import Parse
 import Client
-import Generator
 import Test (run_all_tests, printSolution)
-import Control.Monad
+import System.Environment
+            
+main = getArgs >>= (\args -> if null args
+                  then error "Error: no args"
+                  else case head args of
+                       "--solve" -> if (length args) < 2
+                                    then error "Error: missing file arg"
+                                    else (getPuzzle (head (tail args))) >>= printSolution)
 
--- Command Line parsing ----
-data Args = Args{ generate :: Maybe (Int,Int)
-                , toSolve :: Maybe FilePath
-                , run_tests :: Bool }
-
-{-
-run :: Args -> IO ()
-run Args{generate=Nothing, solve=Nothing, run_tests=b2} = if not b2
-                                                          then error "Must choose an option\n"
-                                                          else return run_tests
-run Args{generate=Nothing, }
--}
-  
--- end command line parsing -------
-main = (liftM solve (getPuzzle "file:///home/spall/Documents/classes/func_prog_studio/sudoku/test1.txt")) >>= printSolution
-
-  --(liftM solve (parseFile "test1.txt")) >>= printSolution
-
-  --printSolution (liftM solve (parseFile "test1.txt"))
 
  -- (liftM show (generatePuzzle 3 3)) >>= putStrLn
   -- run_all_tests
-  --(liftM solve (parseFile "test1.txt")) >>= printSolution
