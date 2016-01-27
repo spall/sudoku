@@ -7,7 +7,7 @@ import Control.Monad
 import Text.Printf
 import Data.List
 
-randomNumber :: Int -> Int -> IO Int
+randomNumber :: Int -> Int -> IO Int -- newStdGen
 randomNumber start end = getStdRandom (randomR (start,end))
 
 inListPair :: (Eq t1) => t1 -> [(t1,t2)] -> Bool
@@ -91,9 +91,9 @@ removeAllSquares board = (removeSquare board [] (countSolved board)) >>= (\b -> 
                                                                                 Nothing -> return board
                                                                                 (Just b2) -> removeAllSquares b2)
 
-generatePuzzle :: Int -> Int -> IO SudokuBoard
-generatePuzzle m n = liftM solve (seedBoard m n) >>= (\b -> case b of
-                                                            Nothing -> putStrLn "trying again" >> generatePuzzle m n
+generatePuzzle :: (Int,Int) -> IO SudokuBoard
+generatePuzzle (m,n) = liftM solve (seedBoard m n) >>= (\b -> case b of
+                                                            Nothing -> putStrLn "trying again" >> generatePuzzle (m,n)
                                                             (Just board) -> removeAllSquares board)
                      
 

@@ -3,26 +3,20 @@ module Server where
 import Parse
 import Happstack.Server 
 import Control.Monad
+import Control.Monad.Trans.Class
 import Generator
 
-getPuzzle :: String -> String -> IO (ServerPart String)
-getPuzzle m n = (liftM show (generatePuzzle (parse2Num m n))) >>= (\str -> return (ok str))
+getNums = liftM2 parse2Num (look "m") (look "n")
 
-response:: IO String -> IO (ServerPart String)
-response str = str >>= (\s -> return (ok s))
+getResponse1 :: (Int,Int) -> IO String
+getResponse1 a =  liftM show $ generatePuzzle a
 
-look2 :: String -> IO (ServerPart String)
-look2 str = return (look str)
+realResponse :: (Int, Int) -> ServerPartT IO String
+realResponse a = lift $ getResponse1 a
 
--- IO ServerPartT IO string
-genBoard :: ServerPart (IO (ServerPart String))
-genBoard = (look "m") >>= (\m -> (look "n") >>= (\n -> return (getPuzzle m n)))
+startServer :: IO ()
+startServer = simpleHTTP nullConf $ getNums >>= realResponse >>= ok
 
-  --(look2 "m") >>= (\m_ -> (look2 "n") >>= (\n_ -> m_ >>= (\m -> n_ >>= (\n -> getPuzzle m n))))
-          
-  --(return "") >>= (\e -> return ((look "m") >>= (\m -> return ((look "n") >>= (\n -> response (getPuzzle m n))))))
-
-startServer :: ServerPart ()
-startServer = simpleHttp nullConf (getPuzzle "3" "3")
+ -- simpleHttp nullConf (getPuzzle "3" "3")
 
   --genBoard  >>= (\tmp -> tmp >>= (\gb -> simpleHTTP nullConf gb))
