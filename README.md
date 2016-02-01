@@ -14,3 +14,5 @@ m and n specify board size M x N
 
 To run client: ./main --solve url-to-board.txt
 
+To run tests: ./main --test
+

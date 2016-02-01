@@ -11,4 +11,5 @@ main = getArgs >>= (\args -> if null args
                                   "--solve" -> if (length args) < 2
                                                then error "Error: missing file arg"
                                                else (getPuzzle (head (tail args))) >>= printSolution
-                                  "--server" -> startServer)
+                                  "--server" -> startServer
+                                  "--test" -> run_all_tests)
